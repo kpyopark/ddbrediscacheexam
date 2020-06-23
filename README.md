@@ -29,7 +29,6 @@ DynamoDB를 이용한 Session Cache와, Redis 를 이용한 Session Cache의 차
 
 ```
 $ sudo yum install jq -y
-$ sudo yum install "Development Tools" zlib-devel openssl-devel ncurses-devel libffi-devel sqlite-devel.x86_64 readline-devel.x86_64 bzip2-devel.x86_64 -y
 ```
 
 
@@ -40,11 +39,11 @@ $ sudo yum install "Development Tools" zlib-devel openssl-devel ncurses-devel li
 1. 먼저 Cloud 9에 있는 Terminal을 이용하여 아래 내용을 입력하여, Java, JPetStore를 설치합니다. (COPY & PASTE). 
 
 ```
-# Install java - 5 minues
+# Install java 11 - 5 minues
 sudo rpm -ivh https://corretto.aws/downloads/latest/amazon-corretto-11-x64-linux-jdk.rpm
 # Install sample application (Spring JPetStore) - 20 minutes
 git clone https://github.com/kazuki43zoo/mybatis-spring-boot-jpetstore.git
-cd mybatis-spring-boot-jpetstore.git
+cd mybatis-spring-boot-jpetstore
 ./mvnw clean 
 ./mvnw package -Dmaven.test.skip=true
 ```
@@ -95,7 +94,7 @@ java -jar target/mybatis-spring-boot-jpetstore-2.0.0-SNAPSHOT.jar
 
 12. 수고하셨습니다. 해당 내용을 통하여, 기본적인 JPetStore와 해당 기능에 대하여 알아보았습니다. 구성한 아키텍처는 단일 EC2 Instance에 Spring Boot와 H2 Standalone Database를 이용하여 구성한 경우며, 아래와 같은 구성으로 생각하면 됩니다. 
 
-![image](https://user-images.githubusercontent.com/9047122/85251209-ae8eae80-b493-11ea-83ca-12256f5ef77b.png)
+![image](https://user-images.githubusercontent.com/9047122/85339790-d1ff3b00-b51f-11ea-9161-28a49d5a6d4b.png)
 
 
 
@@ -103,75 +102,377 @@ java -jar target/mybatis-spring-boot-jpetstore-2.0.0-SNAPSHOT.jar
 
 현재 Cloud9 Instance에 설치되어 있는 JPetStore는 단일 인스턴스에 Local Database, Local Session Manager를 이용하여 구성되어 있습니다. 즉 하나의 Local Instance가 죽을 경우, 어떤 가용성 보장도 제공하지 않습니다. 
 즉, 가용성을 보장 받기 위해서는 자원을 분리하고, 인스터를 N개로 확장하고, User Endpoint를 고가용성이 보장되는 ELB로 구성하여야 합니다. 
-이를 위해서 간단하게, Docker/Fargate를 이용하여 위에서 생성한 JPetStore를 N개의 Fargate Instance에 배포해 보겠습니다. 
+이를 위해서 간단하게, Elastic Beanstalk를 이용하여 위에서 생성한 JPetStore를 N개의 Instance에 배포해 보겠습니다. 
 
-## Docker / Fargate를 이용한 테스트 환경 설정하기
+## Elastic Beanstalk Sample Application 배포해 보기
 
-위에서 Local Instance에 JPetStore를 설치하여, 정상적으로 동작되는 것을 보았습니다. 이 경우에는 위에서 말씀드린 것처럼, 가용성 확장성이 보장되지 않습니다. 이를 위하여, JPetStore Spring Boot Application을 Docker Image로 만들고, 해당 Image를 Fargate에 배포해 보도록 하겠습니다. 
+Elastic BeanStalk은 초기 환경을 생성하면서, 필요한 Managed Role / Managed Policy를 생성합니다. 따라서 Console상에서 Sample Application을 배포해볼 필요가 있습니다. 
 
-1. Java 11 이미지가 포함되어 있는 Docker 이미지를 가지고 옵니다. 
+1. Elastic Beanstalk 서비스로 이동합니다. 
 
-```
-docker run amazoncorretto:11 java -version
-```
+2. "Create Application" 버튼을 선택합니다. 
 
-2. Dockerfile 을 생성합니다. Dockerfile 위치는 mybatis-spring-boot-jpetsotre에 위치시키면 됩니다. 아래 Script를 이용하세요. 
+![image](https://user-images.githubusercontent.com/9047122/85353221-accff400-b542-11ea-8beb-3f6c3260d947.png)
 
-```
-cd ~/environment/mybatis-spring-boot-jpetstore/
-echo "FROM amazoncorretto:11" >> Dockerfile
-echo "COPY target/mybatis-spring-boot-jpetstore-2.0.0-SNAPSHOT.jar jpetstore.jar" >> Dockerfile
-echo "ENTRYPOINT [\"java\",\"-jar\",\"/jpetstore.jar\"]" >> Dockerfile
-docker build -t elvenquest.com/jpetstore-sa .
-```
+3. 아래와 같이 내용을 채워 넣습니다. 
+ - "Application Name" : SampleApp
+ - "Platform" : Java
+ - "Platform branch" : Corretto 11 running on 64bits Amazon Linux 2
+ - "Platform version" : 3.0.2
+ - "Application Mode" : Sample Application (Check)
 
-3. Jpetstore Docker 이미지를 실행해 봅니다. 
+![image](https://user-images.githubusercontent.com/9047122/85353369-06382300-b543-11ea-8edb-ab660a7a0a01.png)
 
-```
-docker run -p 8080:8080 --rm elvenquest.com/jpetstore-sa
-```
+4. "Create application" 버튼을 클릭합니다. 
+ ** 일단 오류가 발생해도, 왼쪽 메뉴의 Environments를 선택하였을 경우, 아래와 같은 목록이 표시되면 괜찮습니다. 
+ 
+![image](https://user-images.githubusercontent.com/9047122/85353625-a5f5b100-b543-11ea-828c-a6daf9b108fb.png)
 
-4. 마찬 가지로 앞선 JPetStore에 사용자를 등록하고 기능테스트를 수행해 보십시요. 
+5. 여기까지 수행되면, 다음에 진행되는 CLI 형태의 접근이 원활하게 수행됩니다. 
 
-5. 수고하셨습니다. 현재까지 아래 아키텍처 까지 구성하셨습니다. 
 
-![image](https://user-images.githubusercontent.com/9047122/85251333-0c22fb00-b494-11ea-9379-6cd8526cb089.png)
+## Elastic Beanstalk CLI 설정하기
 
-## Docker Image를 이용하여 Fargate에 배포하기
-
-1. ECR에 Repository를 먼저 만들어야 합니다. 아래 Script를 Cloud 9 터미널에서 실행하여, ECR Repository를 생성하십시요. 
+1. Cloud 9 instance에 eb cli를 설치합니다. Cloud 9 Terminal에서 아래 내용을 실행시키십시요. 
 
 ```
-aws ecr create-repository --repository-name jpetstore-sample
-```
-결과는 아래와 같이 표시됩니다. 
-```
-{
-    "repository": {
-        "repositoryArn": "arn:aws:ecr:ap-northeast-2:123456789012:repository/jpetstore-sample",
-        "registryId": "123456789012",
-        "repositoryName": "jpetstore-sample",
-        "repositoryUri": "123456789012.dkr.ecr.ap-northeast-2.amazonaws.com/jpetstore-sample",
-        "createdAt": 1592803765.0,
-        "imageTagMutability": "MUTABLE",
-        "imageScanningConfiguration": {
-            "scanOnPush": false
-        }
-    }
-}
-```
-
-2. 앞에서 생성한 Docker Image를 Push 합니다. 
+cd ~
+sudo yum install "Development Tools" zlib-devel openssl-devel ncurses-devel libffi-devel sqlite-devel.x86_64 readline-devel.x86_64 bzip2-devel.x86_64 -y
+git clone https://github.com/aws/aws-elastic-beanstalk-cli-setup.git
+# the below installation takes more 5 minutes.
+./aws-elastic-beanstalk-cli-setup/scripts/bundled_installer
+echo 'export PATH="/home/ec2-user/.ebcli-virtual-env/executables:$PATH"' >> ~/.bash_profile && source ~/.bash_profile
+echo 'export PATH=/home/ec2-user/.pyenv/versions/3.7.2/bin:$PATH' >> /home/ec2-user/.bash_profile && source /home/ec2-user/.bash_profile
 
 ```
-ECR_LOGIN=`aws ecr get-login --no-include-email --region ap-northeast-2`
-REPL_URI=`aws ecr describe-repositories | jq ' .repositories[] | .repositoryUri ' | sed '1,$s/"//g'`
-docker build -t elvenquest.com/jpetstore-sa . 
-docker tag elvenquest.com/jpetstore-sa:latest ${REPL_URI}:latest
-docker push ${REPL_URI}:latest
+
+2. ElasticBeanstalk은 배포가능한 Application 패키지를 이용하여, 앞단에 ELB를 Backend에는 Elastic Beanstalk에서 관리하는 EC2 Instance에 배포를 자동적으로 진행해 줍니다. ELB 는 기본적으로 80 Port를 사용하도록 구성되어 있으며, Backend Application은 5000 Port를 이용하여, 통신하도록 되어 있습니다. 이를 위하여 JPetstore의 application.properties 파일을 수정합니다. 
+
+```
+cd ~/environment/mybatis-spring-boot-jpetstore
+echo "server.port=5000" >> src/main/resources/application.properties
 ```
 
-3. 
+3. Elastic Beanstalk을 초기화 합니다. (eb init) !!!주의!!! 반드시 ap-northeast-2 (seoul) 을 선택하셔야 합니다 !!!
 
-## DynamoDB를 이용하는 Session Manager 설정하기
-1. 먼저 DynamoDB Session을 이용하는
+```
+ec2-user:~/environment/mybatis-spring-boot-jpetstore (master) $cd ~/environment/mybatis-spring-boot-jpetstore
+ec2-user:~/environment/mybatis-spring-boot-jpetstore (master) $ eb init
+```
+아래 내용이 나왔을 때 반드시, 10 (ap-northeast-2)를 선택하십시요.
+```
+Select a default region
+1) us-east-1 : US East (N. Virginia)
+2) us-west-1 : US West (N. California)
+3) us-west-2 : US West (Oregon)
+4) eu-west-1 : EU (Ireland)
+5) eu-central-1 : EU (Frankfurt)
+6) ap-south-1 : Asia Pacific (Mumbai)
+7) ap-southeast-1 : Asia Pacific (Singapore)
+8) ap-southeast-2 : Asia Pacific (Sydney)
+9) ap-northeast-1 : Asia Pacific (Tokyo)
+10) ap-northeast-2 : Asia Pacific (Seoul)
+11) sa-east-1 : South America (Sao Paulo)
+12) cn-north-1 : China (Beijing)
+13) cn-northwest-1 : China (Ningxia)
+14) us-east-2 : US East (Ohio)
+15) ca-central-1 : Canada (Central)
+16) eu-west-2 : EU (London)
+17) eu-west-3 : EU (Paris)
+18) eu-north-1 : EU (Stockholm)
+19) eu-south-1 : EU (Milano)
+20) ap-east-1 : Asia Pacific (Hong Kong)
+21) me-south-1 : Middle East (Bahrain)
+22) af-south-1 : Africa (Cape Town)
+(default is 3): 10
+```
+ Enter를 쳐서 Default값으로 고정합니다. 
+```
+Enter Application Name
+(default is "mybatis-spring-boot-jpetstore"): 
+```
+ Platform은 Java로 선택하십시요 (5 번)
+```
+Select a platform.
+1) .NET on Windows Server
+2) Docker
+3) GlassFish
+4) Go
+5) Java
+6) Node.js
+7) PHP
+8) Packer
+9) Python
+10) Ruby
+11) Tomcat
+(make a selection): 5
+```
+ Platform branch에는 1번을 선택합니다. 
+```
+Select a platform branch.
+1) Corretto 11 running on 64bit Amazon Linux 2
+2) Corretto 8 running on 64bit Amazon Linux 2
+3) Java 8 running on 64bit Amazon Linux
+4) Java 7 running on 64bit Amazon Linux
+(default is 1): 1
+```
+ CodeCommit은 사용하지 않기 때문에, 그냥 Enter를 칩니다.
+```
+Do you wish to continue with CodeCommit? (y/N) (default is n): 
+```
+ SSH 연결은 필요할 수도 있으므로, Default 값을 이용합니다. Enter를 입력합니다. 
+```
+Do you want to set up SSH for your instances?
+(Y/n): 
+```
+ Key Pair를 생성을 선택하고, jpetstore-keypair 를 입력합니다. (임의로 입력해도 상관 없습니다.) 
+```
+1) [ Create new KeyPair ]
+Type a keypair name.
+(Default is aws-eb): jpetstore-keypair
+```
+ Keypair에서 사용하는 Key Phrase는 빈공란으로 입력합니다. Enter를 두번 입력합니다. 
+```
+Enter passphrase (empty for no passphrase): 
+Enter same passphrase again:
+
+```
+
+3. 추가된 application.properties 파일이 포함된 jar package를 생성합니다. 
+
+```
+cd ~/environment/mybatis-spring-boot-jpetstore
+./mvnw clean 
+./mvnw package -Dmaven.test.skip=true
+```
+
+4. 생성된 jar package를 elasticbeanstalk에 등록할 수 있도록, yaml파일에 명시합니다. 
+
+```
+cd ~/environment/mybatis-spring-boot-jpetstore
+echo "deploy:" >> .elasticbeanstalk/config.yml
+echo "  artifact: target/mybatis-spring-boot-jpetstore-2.0.0-SNAPSHOT.jar" >> .elasticbeanstalk/config.yml
+```
+
+5. eb create 명령어를 이용하여 Deploy를 수행하십시요. 
+
+ 이름은 기본 값을 이용합니다. enter를 입력합니다. 
+ 
+```
+$ eb create
+Enter Environment Name
+(default is mybatis-spring-boot-jpetstore-dev): 
+```
+
+ CNAME Prefix값은 변경을 하여야 합니다. 원하는 cname prefix 값을 입력하십시요. 예를 들어 gildong-test 라는 Prefix를 입력하면, 향후에 gildong-test.ap-northeast-2.elasticbeanstalk.com URI가 실제 Site URL이 됩니다. 
+ 
+```
+Enter DNS CNAME prefix
+(default is mybatis-spring-boot-jpetstore-dev): gildong-test
+```
+
+ Application Load Balancer를 선택합니다. 기본값이므로, enter를 입력합니다. 
+ 
+```
+Select a load balancer type
+1) classic
+2) application
+3) network
+(default is 2):
+```
+
+ Spot Fleet은 현재 HoL에서는 사용해도 무방하나, 일단은 기본값인 N으로 설정합니다. 
+ 
+```
+Would you like to enable Spot Fleet requests for this environment?
+(y/N):
+```
+
+ 배포를 수행합니다. 배포를 하면 아래와 같이, CNAME 값이 표시됩니다. 해당 CNAME값을 복사해 둡니다.
+ 
+```
+Environment details for: mybatis-spring-boot-jpetstore-dev
+  Application name: mybatis-spring-boot-jpetstore
+  Region: ap-northeast-2
+  Deployed Version: app-6f9a-200623_022327
+  Environment ID: e-9gxheywvfp
+  Platform: arn:aws:elasticbeanstalk:ap-northeast-2::platform/Corretto 11 running on 64bit Amazon Linux 2/3.0.2
+  Tier: WebServer-Standard-1.0
+  CNAME: gildong-test.ap-northeast-2.elasticbeanstalk.com
+  Updated: 2020-06-23 02:23:30.362000+00:00
+Printing Status:
+```
+
+6. 배포가 완료되고, 정상적으로 기동되었다면, browser에 tab을 열고 위에서 복사한 URL을 입력하여, 화면을 표시합니다. 
+
+7. 정상적으로 Site에 들어가고 기능 테스트를 수행하십시요. 정상적으로 수행되면 성공입니다. 
+   수고하셨습니다. 현재까지 아래 아키텍처 까지 구성하셨습니다. 
+
+![image](https://user-images.githubusercontent.com/9047122/85356921-28ce3a00-b54b-11ea-800b-0b5df7bb75e5.png)
+
+## Instance 의 숫자를 늘릴경우, 발생하는 문제점 확인하기
+
+현재 상태는 ALB 뒤에 하나의 Instance만을 운영하여, 문제가 보이지 않습니다. 만약 ALB 뒤에 Instance가 2개 이상 있다면, 어떤 문제점이 발생할까요?
+문제점을 하나씩 확인해 보겠습니다. 
+
+1. Elastic Beanstalk에서는 간단하게 Instance를 늘리거나 줄어들게 할 수 있습니다. 
+   이를 위하여, eb scale 명령을 사용하면 됩니다. 아래와 같이 2개로 인스턴스 갯수를 늘려보십시요. 
+
+```
+$ eb scale 2
+```
+
+2. 먼저 브라우저로 JPetStore에 접근하시기 바랍니다. 이후 Login을 수행하십시요. 이상한 부분을 눈치채셨습니까? 여러 기능들을 수행해 보시기 바랍니다. 
+
+   여러 기능들을 수행하다 보면, 다음과 같은 문제점들이 보입니다. 
+   
+   - 로그인을 하여도 로그인이 되지 않는 경우
+   
+   - 로그인 정보가 누락되는 경우
+   
+   - 카트 정보가 나타났다 사라지는 경우
+   
+   위 내용은 모두, Database 가 별도의 인스턴스에서 동작하고, Http Session이 독립적으로 동작하기 때문에 발생합니다. 
+
+3. 현재까지 구성사항은 아래와 같습니다. 
+
+![image](https://user-images.githubusercontent.com/9047122/85357839-3684bf00-b54d-11ea-86fb-5f3d85234314.png)
+
+
+## Redis를 이용하는 Session Manager 설정하기
+
+위와 같이 Session Cluster (Http Session)가 필요한 경우에 자주 사용되는 서비스가 ElastiCache Redis입니다. Redis의 짧은 latency와 throughput이 Session manager에 매우 적합하기 때문입니다. 
+
+Spring에서는 Redis session manager가 기본적으로 제공되기 때문에, Redis Cluster를 구성하고, 이후, Configuration 수정을 통하여, 적용해 보도록 하겠습니다. 
+
+1. Redis Cluster 생성을 수행하여야 합니다. Console 상에서 수행을 하여도 되며, 아래와 같이 CLI를 수행하여 구성할 수 있습니다. 
+ Cloud 9 Terminal에서 아래 내용을 수행하십시요. 
+ 
+```
+DEFAULT_VPC=`aws ec2 describe-vpcs | jq ' .Vpcs[] | select(.IsDefault == true) | .VpcId' | sed '1,$s/"//g'`
+SUBNETS=`aws ec2 describe-subnets --filters Name=vpc-id,Values=${DEFAULT_VPC} | jq ' .Subnets[] | .SubnetId' | sed '1,$s/"//g' | xargs`
+aws elasticache create-cache-subnet-group \
+--cache-subnet-group-name redis-subnetgroup \
+--cache-subnet-group-description "Redis Test Cluster Subnets" \
+--subnet-ids ${SUBNETS}
+
+EB_ENVNAME=`aws elasticbeanstalk describe-environments | jq ' .Environments[] | .EnvironmentName' | sed '1,$s/"//g'`
+EB_INSTANCE=`aws elasticbeanstalk describe-environment-resources --environment-name ${EB_ENVNAME} | jq ' .EnvironmentResources.Instances[0] | .Id'`
+EB_SG=`aws ec2 describe-instances --instance-id i-09c43093904d31683 | jq ' .Reservations[0].Instances[0].SecurityGroups[0].GroupId ' | sed '1,$s/"//g'`
+
+aws elasticache create-cache-cluster \
+--cache-cluster-id redis-session-manager-cluster \
+--az-mode single-az \
+--num-cache-nodes 1 \
+--cache-node-type cache.t3.small \
+--engine redis \
+--engine-version 5.0.6 \
+--cache-subnet-group-name redis-subnetgroup \
+--security-group-ids ${EB_SG} \
+--port 6379
+```
+
+2. Redis Cluster를 생성할 때, ElasticBeanstalk에서 생성한 Security Group을 이용하여 Security Group을 설정하였습니다. EB Instances들이 Redis에 접근할 수 있도록, Ingress Rule을 추가합니다. (Cloud 9 Terminal에서 수행하십시요. ) 향후, Cloud 9 Terminal에서 Redis CLI를 이용하여 자료 확인을 하기 위해서 추가적인 Ingress Rule을 추가합니다. 
+
+```
+aws ec2 authorize-security-group-ingress \
+--group-id ${EB_SG} \
+--protocol tcp \
+--port 6379 \
+--source-group ${EB_SG}
+
+DEFAULT_VPC_CIDR=`aws ec2 describe-vpcs | jq ' .Vpcs[] | select(.IsDefault == true) | .CidrBlock' | sed '1,$s/"//g'`
+
+aws ec2 authorize-security-group-ingress \
+--group-id ${EB_SG} \
+--protocol tcp \
+--port 6379 \
+--cidr ${DEFAULT_VPC_CIDR}
+
+aws elasticache autor
+
+```
+
+3. 이것으로 인프라에서 Redis Cluster를 생성하고, Security Group을 설정하여, Elastic Beanstalk에 있는 Instance가 Redis에 접근할 수 있게 구성을 완료하였습니다. 이후에는 Spring Framework에서 Redis session manager를 설정해야 합니다. 
+
+4. pom 파일에서 Spring redis session package를 추가합니다. Cloud 9 에서 project root에 있는 pom.xml 파일을 엽니다. 
+
+![image](https://user-images.githubusercontent.com/9047122/85365998-6b027600-b561-11ea-816d-02f1b24c9e4b.png)
+
+5. Dependencies 안에, 아래 내용을 추가합니다. 
+
+```
+  <dependency>
+			<groupId>org.springframework.session</groupId>
+			<artifactId>spring-session-data-redis</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-data-redis</artifactId>
+		</dependency>
+  
+```
+
+![image](https://user-images.githubusercontent.com/9047122/85366344-20352e00-b562-11ea-834a-1e73ebbe5230.png)
+
+6. application.properites에 Session Store Type을 Redis로 명기합니다. 
+
+```
+cd ~/environment/mybatis-spring-boot-jpetstore
+echo "spring.session.store-type=redis" >> src/main/resources/application.properties
+
+```
+
+7. Redis Cluster 정보를 추가합니다. 
+
+```
+REDIS_ENDPOINT=`aws elasticache describe-cache-clusters --cache-cluster-id redis-session-manager-cluster --show-cache-node-info | jq ' .CacheClusters[0].CacheNodes[0].Endpoint.Address' | sed '1,$s/"//g'`
+
+echo "spring.redis.host=${REDIS_ENDPOINT}" >> src/main/resources/application.properties
+# echo spring.redis.password= # Login password of the redis server.
+echo "spring.redis.port=6379" >> src/main/resources/application.properties
+
+```
+
+8. src/main/resources/application.properties 파일에 위에서 설정한, store-type, host, port 정도가 정상적으로 들어가 있는지 확인합니다. 
+
+9. (option) Redis CLI를 설치하고, redis cluster 에 붙어서, 현재 KEY 목록을 가지고 옵니다. (Cloud 9 Terminal에서 수행)
+
+```
+$ npm install -g redis-cli
+$ rdcli -h ${REDIS_ENDPOINT}
+redis-session-manager-cluster.xxxxx.0001.apn2.cache.amazonaws.com:6379> KEYS *
+
+```
+
+** 만약 연결이 되지 않으면, Security Group Setting이 제대로 되지 않은 것입니다. Redis Cluster console화면에서 Security Group를 확인해 보십시요. 연결이 되어 있지 않다면, Elastic BeanStalk Instance가 사용하는 Default SG값을 Redis Cluster에 적용하면 됩니다. 
+
+10 ElastiCache는 Redis on EC2와는 다른 방식을 취합니다. 예를 들어 CONFIG와 같이 보안적으로 사용을 지양하는 Command는 ElastiCache Redis에서 사용할 수 없습니다. 문제는 Spring Redis Session Manager 는 초기 Connection 구성시에 CONFIG 명령어를 사용하도록 되어 있습니다. 이를 Disable하기 위해서는 Class 방식의 환경 설정이 필요합니다. 이를 위하여, 아래 내용을 Cloud 9 Terminal에서 수행해 주십시요. 
+
+```
+echo "import org.springframework.session.data.redis.config.annotation.web.http.EnableRedisHttpSession;" >> src/main/java/RedisSessionConfig.java
+echo "import org.springframework.session.data.redis.config.ConfigureRedisAction;" >> src/main/java/RedisSessionConfig.java
+echo "import org.springframework.context.annotation.Bean;" >> src/main/java/RedisSessionConfig.java
+echo "@EnableRedisHttpSession" >> src/main/java/RedisSessionConfig.java
+echo "public class RedisSessionConfig {" >> src/main/java/RedisSessionConfig.java
+echo "       @Bean" >> src/main/java/RedisSessionConfig.java
+echo "       public static ConfigureRedisAction configureRedisAction() {" >> src/main/java/RedisSessionConfig.java
+echo "           return ConfigureRedisAction.NO_OP;" >> src/main/java/RedisSessionConfig.java
+echo "       }" >> src/main/java/RedisSessionConfig.java
+echo "}" >> src/main/java/RedisSessionConfig.java
+
+```
+
+11. 반영된 패키지를 만들기 위하여, maven으로 재구성하고, eb를 통하여 update 합니다. 
+
+```
+./mvnw clean 
+./mvnw package -Dmaven.test.skip=true
+eb deploy
+
+```
+
+
+
+
+
