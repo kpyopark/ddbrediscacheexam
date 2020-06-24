@@ -239,3 +239,4 @@ $ eb scale 2
 ![image](https://user-images.githubusercontent.com/9047122/85357839-3684bf00-b54d-11ea-86fb-5f3d85234314.png)
 
 
+수고하셨습ㄴ다. 다음 챕터로 이동하십시요. [Lab2-Redis.md](Lab2-Redis.md)
