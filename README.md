@@ -448,35 +448,18 @@ redis-session-manager-cluster.xxxxx.0001.apn2.cache.amazonaws.com:6379> exit
 
 ```
 cd ~/environment/mybatis-spring-boot-jpetstore
-echo "package com.kazuki43zoo.jpetstore.config;" > src/main/java/com/kazuki43zoo/jpetstore/config/WebMvcConfig.java
-echo "import org.springframework.beans.factory.annotation.Autowired;" >> src/main/java/com/kazuki43zoo/jpetstore/config/WebMvcConfig.java
-echo "import org.springframework.beans.propertyeditors.StringTrimmerEditor;" >> src/main/java/com/kazuki43zoo/jpetstore/config/WebMvcConfig.java
-echo "import org.springframework.context.annotation.Configuration;" >> src/main/java/com/kazuki43zoo/jpetstore/config/WebMvcConfig.java
-echo "import org.springframework.web.bind.WebDataBinder;" >> src/main/java/com/kazuki43zoo/jpetstore/config/WebMvcConfig.java
-echo "import org.springframework.web.bind.annotation.ControllerAdvice;" >> src/main/java/com/kazuki43zoo/jpetstore/config/WebMvcConfig.java
-echo "import org.springframework.web.bind.annotation.InitBinder;" >> src/main/java/com/kazuki43zoo/jpetstore/config/WebMvcConfig.java
-echo "import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;" >> src/main/java/com/kazuki43zoo/jpetstore/config/WebMvcConfig.java
-echo "import org.thymeleaf.spring5.SpringTemplateEngine;" >> src/main/java/com/kazuki43zoo/jpetstore/config/WebMvcConfig.java
-echo "import org.springframework.session.data.redis.config.ConfigureRedisAction;" >> src/main/java/com/kazuki43zoo/jpetstore/config/WebMvcConfig.java
-echo "import org.springframework.context.annotation.Bean;" >> src/main/java/com/kazuki43zoo/jpetstore/config/WebMvcConfig.java
-echo "@Configuration" >> src/main/java/com/kazuki43zoo/jpetstore/config/WebMvcConfig.java
-echo "public class WebMvcConfig implements WebMvcConfigurer {" >> src/main/java/com/kazuki43zoo/jpetstore/config/WebMvcConfig.java
-echo "	@Bean" >> src/main/java/com/kazuki43zoo/jpetstore/config/WebMvcConfig.java
-echo "	ConfigureRedisAction configureRedisAction() {" >> src/main/java/com/kazuki43zoo/jpetstore/config/WebMvcConfig.java
-echo "		return ConfigureRedisAction.NO_OP;" >> src/main/java/com/kazuki43zoo/jpetstore/config/WebMvcConfig.java
-echo "	}" >> src/main/java/com/kazuki43zoo/jpetstore/config/WebMvcConfig.java
-echo "	@ControllerAdvice" >> src/main/java/com/kazuki43zoo/jpetstore/config/WebMvcConfig.java
-echo "	static class WebMvcControllerAdvice {" >> src/main/java/com/kazuki43zoo/jpetstore/config/WebMvcConfig.java
-echo "		@InitBinder" >> src/main/java/com/kazuki43zoo/jpetstore/config/WebMvcConfig.java
-echo "		public void registerCustomEditors(WebDataBinder binder) {" >> src/main/java/com/kazuki43zoo/jpetstore/config/WebMvcConfig.java
-echo "			binder.registerCustomEditor(String.class, new StringTrimmerEditor(true));" >> src/main/java/com/kazuki43zoo/jpetstore/config/WebMvcConfig.java
-echo "		}" >> src/main/java/com/kazuki43zoo/jpetstore/config/WebMvcConfig.java
-echo "	}" >> src/main/java/com/kazuki43zoo/jpetstore/config/WebMvcConfig.java
-echo "	@Autowired" >> src/main/java/com/kazuki43zoo/jpetstore/config/WebMvcConfig.java
-echo "	protected void configureThymeleafSpringTemplateEngine(SpringTemplateEngine templateEngine) {" >> src/main/java/com/kazuki43zoo/jpetstore/config/WebMvcConfig.java
-echo "		templateEngine.setEnableSpringELCompiler(true);" >> src/main/java/com/kazuki43zoo/jpetstore/config/WebMvcConfig.java
-echo "	}" >> src/main/java/com/kazuki43zoo/jpetstore/config/WebMvcConfig.java
-echo "}" >> src/main/java/com/kazuki43zoo/jpetstore/config/WebMvcConfig.java
+echo "package com.kazuki43zoo.jpetstore.config;" >> src/main/java/com/kazuki43zoo/jpetstore/config/RedisConfig.java
+echo "import org.springframework.context.annotation.Configuration;" >> src/main/java/com/kazuki43zoo/jpetstore/config/RedisConfig.java
+echo "import org.springframework.session.data.redis.config.ConfigureRedisAction;" >> src/main/java/com/kazuki43zoo/jpetstore/config/RedisConfig.java
+echo "import org.springframework.context.annotation.Bean;" >> src/main/java/com/kazuki43zoo/jpetstore/config/RedisConfig.java
+echo "@Configuration" >> src/main/java/com/kazuki43zoo/jpetstore/config/RedisConfig.java
+echo "public class RedisConfig {" >> src/main/java/com/kazuki43zoo/jpetstore/config/RedisConfig.java
+echo "	@Bean" >> src/main/java/com/kazuki43zoo/jpetstore/config/RedisConfig.java
+echo "	ConfigureRedisAction configureRedisAction() {" >> src/main/java/com/kazuki43zoo/jpetstore/config/RedisConfig.java
+echo "		return ConfigureRedisAction.NO_OP;" >> src/main/java/com/kazuki43zoo/jpetstore/config/RedisConfig.java
+echo "	}" >> src/main/java/com/kazuki43zoo/jpetstore/config/RedisConfig.java
+echo "}" >> src/main/java/com/kazuki43zoo/jpetstore/config/RedisConfig.java
+
 ```
 
 11. 반영된 패키지를 만들기 위하여, maven으로 재구성하고, eb를 통하여 update 합니다. 
