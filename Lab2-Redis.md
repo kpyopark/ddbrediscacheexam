@@ -151,3 +151,4 @@ redis-session-manager-cluster.xxxxx.0001.apn2.cache.amazonaws.com:6379> KEYS *
 ![image](https://user-images.githubusercontent.com/9047122/85513558-18df5480-b636-11ea-8878-83e56e4a3787.png)
 
 
+수고하셨습니다. 다음장으로 이동하여 Aurora MySQL을 설치하고, Spring Application에 연결하도록 해 보겠습니다. [Lab3-Aurora.md](Lab3-Aurora.md)
