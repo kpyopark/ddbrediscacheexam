@@ -42,7 +42,7 @@ $ sudo yum install jq -y
 # Install java 11 - 5 minues
 sudo rpm -ivh https://corretto.aws/downloads/latest/amazon-corretto-11-x64-linux-jdk.rpm
 # Install sample application (Spring JPetStore) - 20 minutes
-git clone https://github.com/kazuki43zoo/mybatis-spring-boot-jpetstore.git
+git clone https://github.com/kpyopark/mybatis-spring-boot-jpetstore
 cd mybatis-spring-boot-jpetstore
 ./mvnw clean 
 ./mvnw package -Dmaven.test.skip=true
@@ -357,8 +357,8 @@ aws elasticache create-cache-subnet-group \
 --subnet-ids ${SUBNETS}
 
 EB_ENVNAME=`aws elasticbeanstalk describe-environments | jq ' .Environments[] | .EnvironmentName' | sed '1,$s/"//g'`
-EB_INSTANCE=`aws elasticbeanstalk describe-environment-resources --environment-name ${EB_ENVNAME} | jq ' .EnvironmentResources.Instances[0] | .Id'`
-EB_SG=`aws ec2 describe-instances --instance-id i-09c43093904d31683 | jq ' .Reservations[0].Instances[0].SecurityGroups[0].GroupId ' | sed '1,$s/"//g'`
+EB_INSTANCE=`aws elasticbeanstalk describe-environment-resources --environment-name ${EB_ENVNAME} | jq ' .EnvironmentResources.Instances[0] | .Id' | sed '1,$s/"//g'`
+EB_SG=`aws ec2 describe-instances --instance-id ${EB_INSTANCE} | jq ' .Reservations[0].Instances[0].SecurityGroups[0].GroupId ' | sed '1,$s/"//g'`
 
 aws elasticache create-cache-cluster \
 --cache-cluster-id redis-session-manager-cluster \
@@ -389,7 +389,6 @@ aws ec2 authorize-security-group-ingress \
 --port 6379 \
 --cidr ${DEFAULT_VPC_CIDR}
 
-aws elasticache autor
 
 ```
 
@@ -415,15 +414,7 @@ aws elasticache autor
 
 ![image](https://user-images.githubusercontent.com/9047122/85366344-20352e00-b562-11ea-834a-1e73ebbe5230.png)
 
-6. application.properites에 Session Store Type을 Redis로 명기합니다. 
-
-```
-cd ~/environment/mybatis-spring-boot-jpetstore
-echo "spring.session.store-type=redis" >> src/main/resources/application.properties
-
-```
-
-7. Redis Cluster 정보를 추가합니다. 
+6. Redis Cluster 정보를 추가합니다. 
 
 ```
 REDIS_ENDPOINT=`aws elasticache describe-cache-clusters --cache-cluster-id redis-session-manager-cluster --show-cache-node-info | jq ' .CacheClusters[0].CacheNodes[0].Endpoint.Address' | sed '1,$s/"//g'`
@@ -434,9 +425,9 @@ echo "spring.redis.port=6379" >> src/main/resources/application.properties
 
 ```
 
-8. src/main/resources/application.properties 파일에 위에서 설정한, store-type, host, port 정도가 정상적으로 들어가 있는지 확인합니다. 
+7. src/main/resources/application.properties 파일에 위에서 설정한 host 정보가 정상적으로 들어가 있는지 확인합니다. 
 
-9. (option) Redis CLI를 설치하고, redis cluster 에 붙어서, 현재 KEY 목록을 가지고 옵니다. (Cloud 9 Terminal에서 수행)
+8. Redis CLI를 설치하고, redis cluster 에 붙어서, 현재 KEY 목록을 가지고 옵니다. (Cloud 9 Terminal에서 수행)
 
 ```
 $ npm install -g redis-cli
@@ -447,20 +438,45 @@ redis-session-manager-cluster.xxxxx.0001.apn2.cache.amazonaws.com:6379> KEYS *
 
 ** 만약 연결이 되지 않으면, Security Group Setting이 제대로 되지 않은 것입니다. Redis Cluster console화면에서 Security Group를 확인해 보십시요. 연결이 되어 있지 않다면, Elastic BeanStalk Instance가 사용하는 Default SG값을 Redis Cluster에 적용하면 됩니다. 
 
-10 ElastiCache는 Redis on EC2와는 다른 방식을 취합니다. 예를 들어 CONFIG와 같이 보안적으로 사용을 지양하는 Command는 ElastiCache Redis에서 사용할 수 없습니다. 문제는 Spring Redis Session Manager 는 초기 Connection 구성시에 CONFIG 명령어를 사용하도록 되어 있습니다. 이를 Disable하기 위해서는 Class 방식의 환경 설정이 필요합니다. 이를 위하여, 아래 내용을 Cloud 9 Terminal에서 수행해 주십시요. 
+현재는 어떤 세션 정보도 가지고 있지 않기 때문에, 아무 값이 나오지 않는 것을 볼 수 있습니다. exit명령어로 나오십시요. 
 
 ```
-echo "import org.springframework.session.data.redis.config.annotation.web.http.EnableRedisHttpSession;" >> src/main/java/RedisSessionConfig.java
-echo "import org.springframework.session.data.redis.config.ConfigureRedisAction;" >> src/main/java/RedisSessionConfig.java
-echo "import org.springframework.context.annotation.Bean;" >> src/main/java/RedisSessionConfig.java
-echo "@EnableRedisHttpSession" >> src/main/java/RedisSessionConfig.java
-echo "public class RedisSessionConfig {" >> src/main/java/RedisSessionConfig.java
-echo "       @Bean" >> src/main/java/RedisSessionConfig.java
-echo "       public static ConfigureRedisAction configureRedisAction() {" >> src/main/java/RedisSessionConfig.java
-echo "           return ConfigureRedisAction.NO_OP;" >> src/main/java/RedisSessionConfig.java
-echo "       }" >> src/main/java/RedisSessionConfig.java
-echo "}" >> src/main/java/RedisSessionConfig.java
+redis-session-manager-cluster.xxxxx.0001.apn2.cache.amazonaws.com:6379> exit
+```
 
+10 ElastiCache Redis는 Redis on EC2와는 다른 방식을 취합니다. 예를 들어 CONFIG와 같이 보안적으로 사용을 지양하는 Command는 ElastiCache Redis에서 사용할 수 없습니다. 문제는 Spring Redis Session Manager 는 초기 Connection 구성시에 CONFIG 명령어를 사용하도록 되어 있습니다. 이를 Disable하기 위해서는 Class 방식의 환경 설정이 필요합니다. 이를 위하여, 아래 내용을 Cloud 9 Terminal에서 수행해 주십시요. 
+
+```
+cd ~/environment/mybatis-spring-boot-jpetstore
+echo "package com.kazuki43zoo.jpetstore.config;" > src/main/java/com/kazuki43zoo/jpetstore/config/WebMvcConfig.java
+echo "import org.springframework.beans.factory.annotation.Autowired;" >> src/main/java/com/kazuki43zoo/jpetstore/config/WebMvcConfig.java
+echo "import org.springframework.beans.propertyeditors.StringTrimmerEditor;" >> src/main/java/com/kazuki43zoo/jpetstore/config/WebMvcConfig.java
+echo "import org.springframework.context.annotation.Configuration;" >> src/main/java/com/kazuki43zoo/jpetstore/config/WebMvcConfig.java
+echo "import org.springframework.web.bind.WebDataBinder;" >> src/main/java/com/kazuki43zoo/jpetstore/config/WebMvcConfig.java
+echo "import org.springframework.web.bind.annotation.ControllerAdvice;" >> src/main/java/com/kazuki43zoo/jpetstore/config/WebMvcConfig.java
+echo "import org.springframework.web.bind.annotation.InitBinder;" >> src/main/java/com/kazuki43zoo/jpetstore/config/WebMvcConfig.java
+echo "import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;" >> src/main/java/com/kazuki43zoo/jpetstore/config/WebMvcConfig.java
+echo "import org.thymeleaf.spring5.SpringTemplateEngine;" >> src/main/java/com/kazuki43zoo/jpetstore/config/WebMvcConfig.java
+echo "import org.springframework.session.data.redis.config.ConfigureRedisAction;" >> src/main/java/com/kazuki43zoo/jpetstore/config/WebMvcConfig.java
+echo "import org.springframework.context.annotation.Bean;" >> src/main/java/com/kazuki43zoo/jpetstore/config/WebMvcConfig.java
+echo "@Configuration" >> src/main/java/com/kazuki43zoo/jpetstore/config/WebMvcConfig.java
+echo "public class WebMvcConfig implements WebMvcConfigurer {" >> src/main/java/com/kazuki43zoo/jpetstore/config/WebMvcConfig.java
+echo "	@Bean" >> src/main/java/com/kazuki43zoo/jpetstore/config/WebMvcConfig.java
+echo "	ConfigureRedisAction configureRedisAction() {" >> src/main/java/com/kazuki43zoo/jpetstore/config/WebMvcConfig.java
+echo "		return ConfigureRedisAction.NO_OP;" >> src/main/java/com/kazuki43zoo/jpetstore/config/WebMvcConfig.java
+echo "	}" >> src/main/java/com/kazuki43zoo/jpetstore/config/WebMvcConfig.java
+echo "	@ControllerAdvice" >> src/main/java/com/kazuki43zoo/jpetstore/config/WebMvcConfig.java
+echo "	static class WebMvcControllerAdvice {" >> src/main/java/com/kazuki43zoo/jpetstore/config/WebMvcConfig.java
+echo "		@InitBinder" >> src/main/java/com/kazuki43zoo/jpetstore/config/WebMvcConfig.java
+echo "		public void registerCustomEditors(WebDataBinder binder) {" >> src/main/java/com/kazuki43zoo/jpetstore/config/WebMvcConfig.java
+echo "			binder.registerCustomEditor(String.class, new StringTrimmerEditor(true));" >> src/main/java/com/kazuki43zoo/jpetstore/config/WebMvcConfig.java
+echo "		}" >> src/main/java/com/kazuki43zoo/jpetstore/config/WebMvcConfig.java
+echo "	}" >> src/main/java/com/kazuki43zoo/jpetstore/config/WebMvcConfig.java
+echo "	@Autowired" >> src/main/java/com/kazuki43zoo/jpetstore/config/WebMvcConfig.java
+echo "	protected void configureThymeleafSpringTemplateEngine(SpringTemplateEngine templateEngine) {" >> src/main/java/com/kazuki43zoo/jpetstore/config/WebMvcConfig.java
+echo "		templateEngine.setEnableSpringELCompiler(true);" >> src/main/java/com/kazuki43zoo/jpetstore/config/WebMvcConfig.java
+echo "	}" >> src/main/java/com/kazuki43zoo/jpetstore/config/WebMvcConfig.java
+echo "}" >> src/main/java/com/kazuki43zoo/jpetstore/config/WebMvcConfig.java
 ```
 
 11. 반영된 패키지를 만들기 위하여, maven으로 재구성하고, eb를 통하여 update 합니다. 
@@ -472,7 +488,136 @@ eb deploy
 
 ```
 
+12. 패키지가 배포되면, 앞에서 복사한 Elastic Beanstalk CNAME URI를 이용하여 다시 Pestore에 접근 해봅니다. 
+
+13. 로그인을 수행합니다. 
+
+14. Cloud 9 Terminal 에서 다음과 같은 명령어를 이용하여, Redis에 접속합니다. 이후 KEYS * 명령어를 이용하여 Session 정보가 들어가 있는 것을 확인합니다. 
+
+```
+$ rdcli -h ${REDIS_ENDPOINT}
+redis-session-manager-cluster.xxxxx.0001.apn2.cache.amazonaws.com:6379> KEYS *
+redis-session-manager-cluster.xxxxx.0001.apn2.cache.amazonaws.com:6379> KEYS *
+1) spring:session:sessions:32e02a17-d30e-494a-8ddd-8646a5f7ec30
+2) spring:session:index:org.springframework.session.FindByIndexNameSessionRepository.PRINCIPAL_NAME_INDEX_NAME:honggildong
+3) spring:session:sessions:9e6a3a5e-c638-4ee3-a603-0b19c1f05ac5
+
+```
+
+15. 여기까지 수행하였으면, 아래 아키텍처를 완료한 상태가 됩니다. 
+
+![image](https://user-images.githubusercontent.com/9047122/85513558-18df5480-b636-11ea-8878-83e56e4a3787.png)
 
 
+## Aurora MySQL 이용하여, 공통 Database 생성하고, 연결하기
 
+현재는 개별 JPetStore Application에 있는 Local Storage (Hyper SQL)을 이용하여 자료를 저장하고 있습니다. 이럴 경우, 데이터가 서로 다르기 때문에
+문제가 발생할 수 밖에 없습니다. 이를 해결하기 위하여, Aurora MySQL을 별도의 외부 Resource로 등록하고, JPetStore Application을 연결해 보도록 하겠습니다. 
+
+1. RDS Aurora MySQL 에서 사용할 user / password 에서 사용할 정보를 Cloud 9 에 아래와 같이 저장합니다. !!! 주의 - <what as you want> 부분을 반드시 수정하십시요.
+
+```
+DB_USER=<what as you want>
+DB_PASS=<what as you want>
+```
+
+1. RDS MySQL 생성을 하기 위하여, 아래 Command를 Cloud 9 Terminal에서 입력하시기 바랍니다. 
+해당 내용은, JPetStore Instance에서 RDS에 접근할 수 있게 Security Group을 설정하고, Aurora Cluster 생성 이후, Aurora instance를 생성합니다. 
+
+```
+EB_ENVNAME=`aws elasticbeanstalk describe-environments | jq ' .Environments[] | .EnvironmentName' | sed '1,$s/"//g'`
+EB_INSTANCE=`aws elasticbeanstalk describe-environment-resources --environment-name ${EB_ENVNAME} | jq ' .EnvironmentResources.Instances[0] | .Id' | sed '1,$s/"//g'`
+EB_SG=`aws ec2 describe-instances --instance-id ${EB_INSTANCE} | jq ' .Reservations[0].Instances[0].SecurityGroups[0].GroupId ' | sed '1,$s/"//g'`
+DEFAULT_VPC_CIDR=`aws ec2 describe-vpcs | jq ' .Vpcs[] | select(.IsDefault == true) | .CidrBlock' | sed '1,$s/"//g'`
+DB_PORT=3306
+DB_ENGINE=aurora-mysql
+SUBNET_AZ=`aws ec2 describe-subnets --filters Name=vpc-id,Values=${DEFAULT_VPC} | jq ' .Subnets[] | .AvailabilityZone' | sed '1,$s/"//g' | xargs`
+
+aws ec2 authorize-security-group-ingress \
+--group-id ${EB_SG} \
+--protocol tcp \
+--port ${DB_PORT} \
+--source-group ${EB_SG}
+
+aws ec2 authorize-security-group-ingress \
+--group-id ${EB_SG} \
+--protocol tcp \
+--port ${DB_PORT} \
+--cidr ${DEFAULT_VPC_CIDR}
+
+aws rds create-db-subnet-group \
+          --db-subnet-group-name jpetstore-db-subnet \
+          --db-subnet-group-description 'jpetstore database subnet. example' \
+          --subnet-ids ${SUBNETS}
+
+aws rds create-db-cluster \
+          --availability-zones ${SUBNET_AZ} \
+          --database-name dev \
+          --db-cluster-identifier jpetstoredb \
+          --vpc-security-group-ids ${EB_SG} \
+          --db-subnet-group-name jpetstore-db-subnet \
+          --engine ${DB_ENGINE} \
+          --master-username ${DB_USER} \
+          --master-user-password ${DB_PASS} \
+          --no-enable-iam-database-authentication
+
+aws rds create-db-instance \
+--db-instance-identifier jpetinstance \
+--db-instance-class db.t3.medium \
+--engine ${DB_ENGINE} \
+--db-subnet-group-name jpetstore-db-subnet \
+--no-auto-minor-version-upgrade \
+--db-cluster-identifier jpetstoredb
+
+```
+
+2. 일단 생성될 때까지 대기를 하여야 합니다. 이를 위해서 wait 명령어를 이용해 봅니다. 
+
+```
+aws rds wait db-instance-available --filters Name=db-cluster-id,Values=jpetstoredb
+```
+
+3. 생성이 완료되었기 때문에, Database Endpoint를 확인하고 해당 값을, JPetStore에 설정합니다. 
+
+```
+DB_ENDPOINT=`aws rds describe-db-clusters | jq ' .DBClusters[] | select(.DBClusterIdentifier == "jpetstoredb").Endpoint' | sed '1,$s/"//g'`
+cd ~/environment/mybatis-spring-boot-jpetstore
+cat src/main/resources/application.properties | sed "s/jdbc:hsqldb:file:~\/db\/jpetstore/jdbc:mysql:\/\/${DB_ENDPOINT}:${DB_PORT}\/dev/g" > src/main/resources/application.properties.new
+rm src/main/resources/application.properties
+mv src/main/resources/application.properties.new src/main/resources/application.properties
+echo "spring.datasource.username=${DB_USER}" >> src/main/resources/application.properties
+echo "spring.datasource.password=${DB_PASS}" >> src/main/resources/application.properties
+echo "spring.datasource.driver-class-name=org.mariadb.jdbc.Driver" >> src/main/resources/application.properties
+
+```
+
+4. JDBC를 패키징해야 하기 때문에, pom.xml 파일에 maria jdbc library를 추가합니다. project root 디렉토리에 있는 pom.xml 파일을 엽니다. 이후 아래 내용을 추가합니다. 
+
+```
+<dependency>
+    <groupId>org.mariadb.jdbc</groupId>
+    <artifactId>mariadb-java-client</artifactId>
+    <version>2.5.4</version>
+</dependency>
+
+```
+
+4. 새로 프로그램을 Packaging 합니다. 
+
+```
+./mvnw clean 
+./mvnw package -Dmaven.test.skip=true
+
+```
+5. 프로그램을 Elastic BeanStalk을 이용하여, 서버에 배포합니다. 
+
+```
+eb deploy
+```
+
+6. 다시 JPetStore Application 에 CNAME을 이용하여 접근합니다. 이후 로그인 및 기능 테스트를 수행하십시요. 
+
+7. 여기까지 수행하셨다면 다음과 같은 아키텍처가 완성된 상태입니다. 
+
+![image](https://user-images.githubusercontent.com/9047122/85593137-ba3fc800-b681-11ea-804b-e39b3d85eefc.png)
 
