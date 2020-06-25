@@ -86,26 +86,33 @@ Select a default region
 22) af-south-1 : Africa (Cape Town)
 (default is 3): 10
 ```
+ 새로운 프로젝트를 생성하는지를 물어봅니다. 2번을 선택합니다. 
+```
+Select an application to use
+1) SampleApp
+2) [ Create new Application ]
+```
  Enter를 쳐서 Default값으로 고정합니다. 
 ```
 Enter Application Name
 (default is "mybatis-spring-boot-jpetstore"): 
 ```
- Platform은 Java로 선택하십시요 (5 번)
+ Platform은 Java로 선택하십시요 (6 번)
 ```
 Select a platform.
-1) .NET on Windows Server
-2) Docker
-3) GlassFish
-4) Go
-5) Java
-6) Node.js
-7) PHP
-8) Packer
-9) Python
-10) Ruby
-11) Tomcat
-(make a selection): 5
+1) .NET Core on Linux
+2) .NET on Windows Server
+3) Docker
+4) GlassFish
+5) Go
+6) Java
+7) Node.js
+8) PHP
+9) Packer
+10) Python
+11) Ruby
+12) Tomcat
+(make a selection): 
 ```
  Platform branch에는 1번을 선택합니다. 
 ```
@@ -125,10 +132,15 @@ Do you wish to continue with CodeCommit? (y/N) (default is n):
 Do you want to set up SSH for your instances?
 (Y/n): 
 ```
+ 키팽어 생성을 물어봅니다. 생성(1)을 선택하세요. 
+```
+Select a keypair.
+1) ee-default-keypair
+2) [ Create new KeyPair ]
+(default is 1): 
+```
  Key Pair를 생성을 선택하고, jpetstore-keypair 를 입력합니다. (임의로 입력해도 상관 없습니다.) 
 ```
-1) [ Create new KeyPair ]
-Type a keypair name.
 (Default is aws-eb): jpetstore-keypair
 ```
  Keypair에서 사용하는 Key Phrase는 빈공란으로 입력합니다. Enter를 두번 입력합니다. 
